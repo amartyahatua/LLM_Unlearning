@@ -60,7 +60,7 @@ class LLM_Unlearnning:
             train_dataset=dataset,
             dataset_text_field="text",
             max_seq_length=max_seq_length,
-            data_collator=DataCollatorForSeq2Seq(tokenizer=tokenizer),
+            data_collator=DataCollatorForSeq2Seq(tokenizer=self.tokenizer),
             dataset_num_proc=2,
             packing=False,  # Can make training 5x faster for short sequences.
             args=TrainingArguments(
@@ -84,3 +84,6 @@ class LLM_Unlearnning:
 
         trainer.train()
 
+
+llm_unlearnning = LLM_Unlearnning("unsloth/llama-3-8b-bnb-4bit", max_seq_length=500, load_in_4bit=True)
+llm_unlearnning.train()
