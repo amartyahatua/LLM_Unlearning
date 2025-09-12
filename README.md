@@ -107,76 +107,6 @@ python evaluate.py \
 - **Privacy Metrics**: Evaluates resistance to membership inference attacks
 - **Computational Efficiency**: Tracks unlearning time and resource usage
 
-## Dataset Format
-
-### Forget Dataset
-```json
-[
-    {
-        "text": "Information to be forgotten",
-        "label": "target_label"
-    },
-    ...
-]
-```
-
-### Retain Dataset
-```json
-[
-    {
-        "text": "Information to be retained",
-        "label": "correct_label"
-    },
-    ...
-]
-```
-
-## Configuration
-
-Create a configuration file (`config.yaml`) to customize your unlearning setup:
-
-```yaml
-model:
-  name_or_path: "facebook/opt-1.3b"
-  cache_dir: "./cache"
-
-unlearning:
-  method: "gradient_ascent"
-  learning_rate: 2e-5
-  num_epochs: 3
-  batch_size: 4
-  gradient_accumulation_steps: 4
-  
-data:
-  forget_dataset: "data/forget_set.json"
-  retain_dataset: "data/retain_set.json"
-  max_length: 512
-
-training:
-  output_dir: "./outputs"
-  logging_steps: 10
-  save_steps: 500
-  eval_steps: 100
-  warmup_ratio: 0.1
-  weight_decay: 0.01
-
-evaluation:
-  metrics: ["forget_quality", "model_utility", "privacy_risk"]
-  eval_datasets: ["forget", "retain", "general"]
-```
-
-## Experimental Results
-
-Our framework has been evaluated on various datasets and models:
-
-| Method | Forget Quality ↑ | Model Utility ↑ | Efficiency ↑ |
-|--------|------------------|------------------|---------------|
-| Gradient Ascent | 0.85 | 0.72 | 10^5x faster |
-| Fine-tuning + Random | 0.78 | 0.69 | 10^5x faster |
-| Representation Editing | 0.82 | 0.74 | 10^4x faster |
-
-*Results averaged across multiple datasets and model sizes*
-
 ## Applications
 
 ### Data Privacy Compliance
@@ -190,42 +120,16 @@ Our framework has been evaluated on various datasets and models:
 - Address copyright concerns
 
 ### Model Safety
-- Remove backdoor vulnerabilities
-- Eliminate specific failure modes
-- Improve model robustness
+
 
 ## Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ### Development Setup
-```bash
-# Install development dependencies
-pip install -r requirements-dev.txt
 
-# Run tests
-python -m pytest tests/
-
-# Format code
-black .
-isort .
-
-# Run linting
-flake8 .
-```
 
 ## Citation
 
-If you use this work in your research, please cite:
-
-```bibtex
-@article{hatua2024llm_unlearning,
-    title={LLM Unlearning: Efficient Machine Unlearning for Large Language Models},
-    author={Hatua, Amartya and others},
-    journal={arXiv preprint arXiv:XXXX.XXXXX},
-    year={2024}
-}
-```
 
 ## Related Work
 
@@ -239,15 +143,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- Thanks to the machine unlearning research community
-- Built upon the excellent work from [list key dependencies/inspirations]
-- Supported by [funding sources if applicable]
 
 ## Contact
 
 For questions or support, please:
 - Open an issue on GitHub
-- Email: [your-email@domain.com]
+- Email: amartyahatua@gmail.com
 - Join our discussion: [Discord/Slack link if available]
 
 ---
