@@ -23,7 +23,8 @@ from transformers import TrainingArguments, DataCollatorForSeq2Seq
 from unsloth import is_bfloat16_supported
 
 from trl import SFTTrainer
-from data_preparation.data_prep import data_preparation_full
+from data_preparation.data_prep import data_preparation_full, data_preparation_retain, data_preparation_forget
+from optimization.optimization_functions import GradientAscentSFTTrainer, ScaledGradientAscentTrainer, WeightedUnlearningTrainer
 from datasets import load_dataset
 
 
@@ -59,9 +60,9 @@ class LLM_Unlearnning:
             load_in_4bit=self.load_in_4bit,
         )
 
-    # Loading the Peft (Lora) model is used
+    # Loading the Peft (Lora) model is used and full dataset is used for training
     def train(self):
-        model = FastLanguageModel.get_peft_model(
+        self.model_full_dataset = FastLanguageModel.get_peft_model(
             self.base_model,
             r=16,  # Choose any number > 0 ! Suggested 8, 16, 32, 64, 128
             target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
@@ -77,7 +78,7 @@ class LLM_Unlearnning:
         )
 
         trainer = SFTTrainer(
-            model=model,
+            model=self.model_full_dataset,
             tokenizer=self.tokenizer,
             train_dataset=data_preparation_full(),
             dataset_text_field="text",
@@ -106,6 +107,110 @@ class LLM_Unlearnning:
 
         trainer.train()
 
+    # Loading the Peft (Lora) model is used and rerain dataset is used for training
+    def train_with_retain_dataset(self):
+        self.retain_model = FastLanguageModel.get_peft_model(
+            self.base_model,
+            r=16,  # Choose any number > 0 ! Suggested 8, 16, 32, 64, 128
+            target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                            "gate_proj", "up_proj", "down_proj", ],
+            lora_alpha=16,
+            lora_dropout=0,  # Supports any, but = 0 is optimized
+            bias="none",  # Supports any, but = "none" is optimized
+            # [NEW] "unsloth" uses 30% less VRAM, fits 2x larger batch sizes!
+            use_gradient_checkpointing="unsloth",  # True or "unsloth" for very long context
+            random_state=3407,
+            use_rslora=True,  # We support rank stabilized LoRA
+            loftq_config=None,  # And LoftQ
+        )
+
+        trainer = SFTTrainer(
+            model=self.retain_model,
+            tokenizer=self.tokenizer,
+            train_dataset=data_preparation_retain(),
+            dataset_text_field="text",
+            max_seq_length=max_seq_length,
+            data_collator=DataCollatorForSeq2Seq(tokenizer=self.tokenizer),
+            dataset_num_proc=2,
+            packing=False,  # Can make training 5x faster for short sequences.
+            args=TrainingArguments(
+                per_device_train_batch_size=2,
+                gradient_accumulation_steps=4,
+                warmup_steps=5,
+                # num_train_epochs = 1, # Set this for 1 full training run.
+                max_steps=60,
+                learning_rate=2e-4,
+                fp16=not is_bfloat16_supported(),
+                bf16=is_bfloat16_supported(),
+                logging_steps=10,
+                optim="adamw_8bit",
+                weight_decay=0.01,
+                lr_scheduler_type="linear",
+                seed=3407,
+                output_dir="outputs",
+                report_to="none",  # Use this for WandB etc
+            ),
+        )
+
+        trainer.train()
+
+    # Loading the Peft (Lora) model is used and forget dataset is used for unlearning
+    def finetune_with_forget_dataset(self):
+        self.forget_model = FastLanguageModel.get_peft_model(
+            self.model_full_dataset,
+            r=16,  # Choose any number > 0 ! Suggested 8, 16, 32, 64, 128
+            target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                            "gate_proj", "up_proj", "down_proj", ],
+            lora_alpha=16,
+            lora_dropout=0,  # Supports any, but = 0 is optimized
+            bias="none",  # Supports any, but = "none" is optimized
+            # [NEW] "unsloth" uses 30% less VRAM, fits 2x larger batch sizes!
+            use_gradient_checkpointing="unsloth",  # True or "unsloth" for very long context
+            random_state=3407,
+            use_rslora=True,  # We support rank stabilized LoRA
+            loftq_config=None,  # And LoftQ
+        )
+
+        trainer = GradientAscentSFTTrainer(
+            model=self.forget_model,
+            tokenizer=self.tokenizer,
+            train_dataset=data_preparation_forget(),
+            dataset_text_field="text",
+            max_seq_length=max_seq_length,
+            data_collator=DataCollatorForSeq2Seq(tokenizer=self.tokenizer),
+            dataset_num_proc=2,
+            packing=False,  # Can make training 5x faster for short sequences.
+            args=TrainingArguments(
+                per_device_train_batch_size=2,
+                gradient_accumulation_steps=4,
+                warmup_steps=5,
+                # num_train_epochs = 1, # Set this for 1 full training run.
+                max_steps=60,
+                learning_rate=2e-4,
+                fp16=not is_bfloat16_supported(),
+                bf16=is_bfloat16_supported(),
+                logging_steps=10,
+                optim="adamw_8bit",
+                weight_decay=0.01,
+                lr_scheduler_type="linear",
+                seed=3407,
+                output_dir="outputs",
+                report_to="none",  # Use this for WandB etc
+            ),
+        )
+
+        trainer.train()
+
+
+
 
 llm_unlearnning = LLM_Unlearnning("unsloth/llama-3-8b-bnb-4bit", max_seq_length=500, load_in_4bit=True)
+
+# Finetuning using full datatset
 llm_unlearnning.train()
+
+# Finetuning using retain datatset
+llm_unlearnning.train_with_retain_dataset()
+
+# Finetuning using forget datatset
+llm_unlearnning.finetune_with_forget_dataset()
