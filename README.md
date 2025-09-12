@@ -149,8 +149,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 For questions or support, please:
 - Open an issue on GitHub
 - Email: amartyahatua@gmail.com
-- Join our discussion: [Discord/Slack link if available]
-
 ---
 
 **Disclaimer**: This tool is for research purposes. Please ensure compliance with applicable laws and regulations when using unlearning techniques on real-world data.
