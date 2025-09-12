@@ -23,9 +23,9 @@ from transformers import TrainingArguments, DataCollatorForSeq2Seq
 from unsloth import is_bfloat16_supported
 
 from trl import SFTTrainer
-from data_preparation.data_prep import data_preparation_full, data_preparation_retain, data_preparation_forget
+from data_preparation.data_prep import data_preparation_full, data_preparation_retain, data_preparation_forget, data_preparation_holdout
 from optimization.optimization_functions import GradientAscentSFTTrainer, ScaledGradientAscentTrainer, WeightedUnlearningTrainer
-from inference.generate_inference import generate_inference
+from inference.generate_inference import get_results
 from datasets import load_dataset
 
 
@@ -108,9 +108,7 @@ class LLM_Unlearnning:
 
         trainer.train()
         print("\nUsing Full dataset Model")
-        question_string = "Where is Boston?"
-        answer = generate_inference(self.model_full_dataset, self.tokenizer, question_string)
-        print(f"Question: {question_string}\nAnswer: {answer}")
+        get_results("full_data", data_preparation_holdout, self.model_full_dataset, self.tokenizer)
 
 
     # Loading the Peft (Lora) model is used and rerain dataset is used for training
@@ -160,9 +158,8 @@ class LLM_Unlearnning:
 
         trainer.train()
         print("\nUsing Retain Model")
-        question_string = "Where is Boston?"
-        answer = generate_inference(self.retain_model, self.tokenizer, question_string)
-        print(f"Question: {question_string}\nAnswer: {answer}")
+        get_results("retain", data_preparation_holdout, self.retain_model, self.tokenizer)
+
 
     # Loading the Peft (Lora) model is used and forget dataset is used for unlearning
     def finetune_with_forget_dataset(self):
@@ -211,9 +208,7 @@ class LLM_Unlearnning:
 
         trainer.train()
         print("\nUsing Forget Model")
-        question_string = "Where is Boston?"
-        answer = generate_inference(self.forget_model, self.tokenizer, question_string)
-        print(f"Question: {question_string}\nAnswer: {answer}")
+        get_results("forget", data_preparation_holdout, self.forget_model, self.tokenizer)
 
 
 
