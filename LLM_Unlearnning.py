@@ -22,14 +22,36 @@ from peft import LoraConfig, get_peft_model
 from transformers import TrainingArguments, DataCollatorForSeq2Seq
 from unsloth import is_bfloat16_supported
 
-from data_preparation.data_prep import data_preparation_full
 from trl import SFTTrainer
+from data_preparation.data_prep import data_preparation_full
+from datasets import load_dataset
+
+
+def data_preparation_full_():
+    alpaca_prompt = """Answer the following question:
+### Question:
+{}
+
+### Answer:
+{}"""
+    
+    def formatting_prompts_func(examples):
+        texts = [alpaca_prompt.format(question, answer) for question, answer in zip(examples["question"], examples["answer"])]
+        return {"text": texts}
+    
+    # Load the dataset
+    print("Loading TOFU dataset...")
+    dataset = load_dataset("locuslab/TOFU", "full", split="train")
+    print(f"Raw dataset: {dataset}")
+    dataset = dataset.map(formatting_prompts_func, batched=True)
+    print(f"Formatted dataset: {dataset}")
+    return dataset
 
 class LLM_Unlearnning:
     def __init__(self,model_name, max_seq_length, load_in_4bit):
         self.model_name = model_name
         self.max_seq_length = max_seq_length
-
+        self.load_in_4bit = load_in_4bit
         self.base_model, self.tokenizer = FastLanguageModel.from_pretrained(
             model_name=self.model_name,  # or choose "unsloth/Llama-3.2-1B-Instruct"
             max_seq_length=self.max_seq_length,
@@ -38,9 +60,9 @@ class LLM_Unlearnning:
         )
 
     # Loading the Peft (Lora) model is used
-    def train(self, model, dataset):
+    def train(self):
         model = FastLanguageModel.get_peft_model(
-            model,
+            self.base_model,
             r=16,  # Choose any number > 0 ! Suggested 8, 16, 32, 64, 128
             target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
                             "gate_proj", "up_proj", "down_proj", ],
@@ -57,7 +79,7 @@ class LLM_Unlearnning:
         trainer = SFTTrainer(
             model=model,
             tokenizer=self.tokenizer,
-            train_dataset=dataset,
+            train_dataset=data_preparation_full(),
             dataset_text_field="text",
             max_seq_length=max_seq_length,
             data_collator=DataCollatorForSeq2Seq(tokenizer=self.tokenizer),
