@@ -1,4 +1,5 @@
-# LLM Unlearning
+# Machine Unlearning Across Scales: Evaluation of
+Optimization Methods on Language Models
 
 A comprehensive framework for machine unlearning in Large Language Models (LLMs), enabling models to selectively forget specific information while maintaining overall performance.
 
